@@ -26,6 +26,8 @@ export class YunzaiRouteController {
     this.root = root;
     this.buildReply = buildReply;
     this.refreshData = refreshData;
+    // 同一目标的并发请求共享一次渲染，避免重复下载切片并长时间排队。
+    this.inflight = new Map();
   }
 
   get dataFile() { return join(this.root, 'data', 'markers.json'); }
@@ -84,16 +86,20 @@ export class YunzaiRouteController {
       return true;
     }
 
-    const result = await enqueueRender(async () => {
-      const reply = await this.buildReply(query, {
+    const key = query.trim().toLocaleLowerCase();
+    let rendering = this.inflight.get(key);
+    if (!rendering) {
+      rendering = enqueueRender(() => this.buildReply(query, {
         root: this.root,
         maxPoints: 40,
         basemap: true,
         beforePage: waitForLotusSignin,
-      });
-      if (reply.ok) await sendRouteResult(event, reply, segmentApi);
-      return reply;
-    });
+      }));
+      this.inflight.set(key, rendering);
+      rendering.finally(() => this.inflight.delete(key)).catch(() => {});
+    }
+    const result = await rendering;
+    if (result.ok) await sendRouteResult(event, result, segmentApi);
     if (!result.ok) {
       await event.reply(`[地图路线]${result.text}`);
       return true;
