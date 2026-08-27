@@ -1,0 +1,14 @@
+{
+  "name": "yunzai-map-route-service",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "原神本地点位同步、路线渲染与 TRSS-Yunzai 消息服务",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "smoke": "node scripts/check.mjs"
+  },
+  "dependencies": {
+    "sharp": "^0.35.4"
+  }
+}
